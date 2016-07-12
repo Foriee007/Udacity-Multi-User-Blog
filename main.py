@@ -62,6 +62,9 @@ class MasterHandler(webapp2.RequestHandler):
     def logout(self):
         self.response.headers.add_header('Set-Cookie', 'user_id=; Path=/')
 
+    def error(self):
+        self.render('error.html')
+
     def initialize(self, *a, **kw):
         webapp2.RequestHandler.initialize(self, *a, **kw)
         uid = self.read_secure_cookie('user_id')
@@ -107,9 +110,10 @@ class RegisterPage(MasterHandler):
             if valid_password(password):
                 if password == verify:
                     user = database.User.getUserByName(name)
-                    if user.user_name == name:
-                        msg = "The username already exisits."
-                        self.render('register.html', error = msg)
+                    if user:
+                        if user.user_name == name:
+                            msg = "The username already exisits."
+                            self.render('register.html', error = msg)
                     else:
                         password_hash = hashPassword(password, name)
                         user_id = database.User.addUser(name, password_hash)
@@ -136,9 +140,9 @@ class PostPage(MasterHandler):
     def get(self, post_id):
         post = database.Post.getPost(int(post_id))
         if not post:
-            self.error(404)
-            return
-        self.render("viewpost.html", post = post)
+            return self.error()
+        comments = database.Comment.getCommentsByPostId(post_id)
+        self.render("viewpost.html", post = post, comments = comments)
 
 class AddPostPage(MasterHandler):
     def get(self):
@@ -149,7 +153,7 @@ class AddPostPage(MasterHandler):
 
     def post(self):
         if not self.user:
-            self.redirect('/')
+            return self.redirect('/')
 
         user = self.user
         title = self.request.get('title')
@@ -165,9 +169,24 @@ class EditPostPage(MasterHandler):
     def get(self, post_id):
         post = database.Post.getPost(int(post_id))
         if not post:
-            self.error(404)
+            self.error()
             return
-        self.render("viewpost.html", post = post)
+        self.render("addpost.html", post = post)
+
+    def post(self, post_id):
+        if not self.user:
+            return self.redirect('/')
+
+        user = self.user
+        title = self.request.get('title')
+        content = self.request.get('content')
+        #post_id = self.request.get('post_id')
+        author = user.user_name
+        database.Post.editPost(title = title,
+                               content = content,
+                               author = author,
+                               post_id = post_id)
+        self.redirect('/post/' + str(post_id))
 
 class DeletePost(MasterHandler):
     def get(self):
@@ -175,7 +194,7 @@ class DeletePost(MasterHandler):
     
     def post(self):
         if not self.user:
-            self.redirect('/')
+            return self.redirect('/')
 
         user = self.user
         post_id = self.request.get('postid')
@@ -189,8 +208,90 @@ class DeletePost(MasterHandler):
         else:
             self.error(401)
             return
-                          
+
+class AddComment(MasterHandler):
+    def post(self):
+        if not self.user:
+            return self.redirect('/')
+
+        user = self.user
+        post_id = self.request.get('post_id')
+        content = self.request.get('content')
+        if post_id and content:
+            database.Comment.addComment(post_id = post_id, text = content, author = user.user_name)
+            return self.redirect('/post/'+post_id)
+        else:
+            return self.error()
+                
+class EditComment(MasterHandler):
+    def post(self):
+        if not self.user:
+            return self.redirect('/')
+
+        user = self.user
+        post_id = self.request.get('post_id')
+        content = self.request.get('content')
+        if post_id and content:
+            database.Comment.addComment(post_id = post_id, text = content, author = user.user_name)
+            return self.redirect('/post/'+post_id)
+        else:
+            return self.error()
         
+class DeleteComment(MasterHandler):
+    def get(self):
+        self.redirect('/')
+    
+    def post(self):
+        if not self.user:
+            return self.redirect('/')
+
+        user = self.user
+        comment_id = self.request.get('comment_id')
+        comment = database.Comment.getComment(comment_id)
+
+        if comment.comment_author == user.user_name:
+            success = database.Comment.deleteComment(int(comment_id))
+            if success:
+                return self.redirect('/')
+        else:
+            self.error(401)
+            return 
+
+class AddLike(MasterHandler):
+    def post(self):
+        if not self.user:
+            return self.redirect('/')
+
+        user = self.user
+        post_id = self.request.get('post_id')
+        content = self.request.get('content')
+        if post_id and content:
+            database.Comment.addComment(post_id = post_id, text = content, author = user.user_name)
+            return self.redirect('/post/'+post_id)
+        else:
+            return self.error() 
+        
+class DeleteLike(MasterHandler):
+    def get(self):
+        self.redirect('/')
+    
+    def post(self):
+        if not self.user:
+            return self.redirect('/')
+
+        user = self.user
+        post_id = self.request.get('postid')
+        post = database.Post.getPost(post_id)
+
+        if post.post_author == user.user_name:
+            success = database.Post.deletePost(int(post_id))
+            if success:
+                self.render('index.html')
+                self.redirect('/')
+        else:
+            self.error(401)
+            return
+
 app = webapp2.WSGIApplication([
     ('/', MainPage),
     ('/account', AccountPage),
@@ -201,4 +302,9 @@ app = webapp2.WSGIApplication([
     ('/editpost/([0-9]+)', EditPostPage),
     ('/post/([0-9]+)', PostPage),
     ('/delete', DeletePost),
+    ('/addcomment', AddComment),
+    ('/editcomment', EditComment),
+    ('/deletecomment', DeleteComment),
+    ('/addlike', AddLike),
+    ('/deletelike', DeleteLike),
 ], debug=True)

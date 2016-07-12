@@ -14,8 +14,8 @@ $(document).ready(function () {
                 minlength: 3
             }
         },
-        submitHandler: function (form) { // for demo
-            return false; // for demo
+        submitHandler: function (form) {
+            return true;
         }
     });
 });

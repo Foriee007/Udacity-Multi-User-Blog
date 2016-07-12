@@ -15,6 +15,16 @@ class Post(ndb.Model):
         return p.key.id()
 
     @classmethod
+    def editPost(cls, title, content, author, post_id):
+        post = Post.get_by_id(int(post_id))
+        if post:
+            if post.post_author == author:
+                post.post_title = title
+                post.post_content = content
+                post.put()
+                return post.key.id()
+
+    @classmethod
     def getPost(cls, post_id):
         return Post.get_by_id(int(post_id))
 
@@ -66,4 +76,60 @@ class User(ndb.Model):
 
 
 class LikePost(ndb.Model):
-    post_id = ndb.StringProperty(required = True)
+    like_post = ndb.StringProperty(required = True)
+    like_author = ndb.StringProperty(required = True)
+    like_create = ndb.DateTimeProperty(auto_now_add = True)
+
+    @classmethod
+    def addLike(cls, post_id, author):
+        l = LikePost(like_post = str(post_id),
+                     like_author = str(author))
+        l.put()
+        return l.key.id()
+
+    @classmethod
+    def countByPost(cls, post_id):
+        likes = LikePost.query(LikePost.like_post == post_id)
+        return likes.count()
+
+    @classmethod
+    def deleteLike(cls, like_id):
+        like = LikePost.get_by_id(int(like_id))
+        if like:
+            like.key.delete()
+            return True
+        else:
+            return False
+
+
+
+class Comment(ndb.Model):
+    comment_post = ndb.StringProperty(required = True)
+    comment_text = ndb.StringProperty(required = True)
+    comment_author = ndb.StringProperty(required = True)
+    comment_created = ndb.DateTimeProperty(auto_now_add = True)
+
+    @classmethod
+    def getCommentsByPostId(cls, post_id):
+        return Comment.query(Comment.comment_post==post_id)
+
+    @classmethod
+    def getComment(cls, comment_id):
+        return Comment.get_by_id(int(comment_id))
+
+    @classmethod
+    def addComment(cls, post_id, text, author):
+        c= Comment(comment_post = str(post_id), 
+                   comment_text = str(text), 
+                   comment_author = str(author))
+        c.put()
+        return c.key.id()
+
+    @classmethod
+    def deleteComment(cls, comment_id):
+        comment = Comment.get_by_id(int(comment_id))
+        if comment:
+            comment.key.delete()
+            return True
+        else:
+            return False
