@@ -2,21 +2,27 @@
 
 {% block content %}
 <div class="row">
-    <div class="col-md-10">
+    <div class="col-md-9">
         <h2 class="post-title">
             {{ post.post_title }}
         </h2>
     </div>
     {% if post.post_author == user.user_name %}
-    <div class="col-md-1">
-        <a class="btn btn-warning" href="/editpost/{{ post.key.id() }}">Edit</a>
-    </div>
-    <div class="col-md-1">
+    <div class="col-md-3">
         <form action="\delete" method="post">
             <input type="hidden" value="{{ post.key.id() }}" name="postid">
-            <input type="submit" class="btn btn-danger" value="Delete">
+            <div class="btn-group">
+                <a class="btn btn-warning" href="/editpost/{{ post.key.id() }}">Edit</a>
+                <input type="submit" class="btn btn-danger" value="Delete">
+            </div>
         </form>
     </div>
+    {% else %}
+    {% if user %}
+    <div class="col-md-3">
+        <a href="/addlike/{{ post.key.id() }}" class="btn btn-primary">{{ like }}</a>
+    </div>
+    {% endif %}
     {% endif %}
 </div>
 <div class="row">

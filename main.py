@@ -142,7 +142,13 @@ class PostPage(MasterHandler):
         if not post:
             return self.error()
         comments = database.Comment.getCommentsByPostId(post_id)
-        self.render("viewpost.html", post = post, comments = comments)
+        like_text = 'Like'
+        if self.user:
+            user = self.user
+            like = database.LikePost.getLikeByPostAndAuthor(post_id, user.user_name)
+            if like:
+                like_text = 'Liked'
+        self.render("viewpost.html", post = post, comments = comments, like = like_text)
 
 class AddPostPage(MasterHandler):
     def get(self):
@@ -258,13 +264,25 @@ class DeleteComment(MasterHandler):
             return 
 
 class AddLike(MasterHandler):
-    def post(self):
+    def get(self, post_id):
         if not self.user:
             return self.redirect('/')
 
         user = self.user
-        post_id = self.request.get('post_id')
-        content = self.request.get('content')
+        post = database.Post.getPost(post_id)
+        if not post:
+            return self.redirect('/')
+        like = database.LikePost.getLikeByPostAndAuthor(post_id, user.user_name)
+        if like:
+            database.LikePost.deleteLike(like.key.id())
+        else:
+            if post.post_author == user.user_name:
+                return self.redirect('/')
+            else:
+                database.LikePost.addLike(post_id, user.user_name)
+
+        return self.redirect('/post/'+post_id)
+
         if post_id and content:
             database.Comment.addComment(post_id = post_id, text = content, author = user.user_name)
             return self.redirect('/post/'+post_id)
@@ -305,6 +323,6 @@ app = webapp2.WSGIApplication([
     ('/addcomment', AddComment),
     ('/editcomment', EditComment),
     ('/deletecomment', DeleteComment),
-    ('/addlike', AddLike),
+    ('/addlike/([0-9]+)', AddLike),
     ('/deletelike', DeleteLike),
 ], debug=True)

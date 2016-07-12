@@ -88,6 +88,13 @@ class LikePost(ndb.Model):
         return l.key.id()
 
     @classmethod
+    def getLikeByPostAndAuthor(cls, post_id, author):
+        likes = LikePost.query(LikePost.like_post == post_id and 
+                               LikePost.like_author == author).fetch(1)
+        for l in likes:
+            return l
+
+    @classmethod
     def countByPost(cls, post_id):
         likes = LikePost.query(LikePost.like_post == post_id)
         return likes.count()
